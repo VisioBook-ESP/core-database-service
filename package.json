@@ -19,7 +19,13 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
-    "db:seed": "ts-node prisma/seed.ts"
+    "db:seed": "ts-node prisma/seed.ts",
+    "docker:build": "cd docker && ./build.sh",
+    "docker:up": "cd docker && docker-compose up -d",
+    "docker:down": "cd docker && docker-compose down",
+    "docker:logs": "cd docker && docker-compose logs -f",
+    "docker:clean": "cd docker && docker-compose down -v --remove-orphans",
+    "docker:restart": "npm run docker:down && npm run docker:up"
   },
   "keywords": [],
   "author": "",
