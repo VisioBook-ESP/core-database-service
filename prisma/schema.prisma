@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Database Service Core Models
+model RegisteredDatabase {
+  id            String   @id @default(cuid())
+  serviceName   String   @unique
+  databaseType  String   // postgresql, mysql, etc.
+  ormType       String   // prisma, sqlalchemy, gorm, etc.
+  connectionString String
+  schemaVersion String
+  status        String   @default("registered") // registered, extracting, consolidated, decommissioned
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  schemas       DatabaseSchema[]
+  extractions   DatabaseExtraction[]
+
+  @@map("registered_databases")
+}
+
+model DatabaseSchema {
+  id              String   @id @default(cuid())
+  databaseId      String
+  version         String
+  schemaDefinition Json
+  conflicts       Json?
+  checksum        String
+  createdAt       DateTime @default(now())
+
+  database        RegisteredDatabase @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+
+  @@map("database_schemas")
+}
+
+model DatabaseExtraction {
+  id              String   @id @default(cuid())
+  databaseId      String
+  status          String   @default("pending") // pending, in_progress, completed, failed
+  extractionType  String   // schema_only, data_only, full
+  progress        Json?
+  statistics      Json?
+  errors          Json?
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  database        RegisteredDatabase @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+
+  @@map("database_extractions")
+}
+
+model ConsolidationPlan {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  databaseIds     String[] // Array of database IDs to consolidate
+  strategy        Json     // Consolidation strategy configuration
+  conflicts       Json?    // Detected conflicts
+  resolutions     Json?    // Conflict resolutions
+  status          String   @default("draft") // draft, approved, executing, completed, failed
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  executions      ConsolidationExecution[]
+
+  @@map("consolidation_plans")
+}
+
+model ConsolidationExecution {
+  id              String   @id @default(cuid())
+  planId          String
+  status          String   @default("pending") // pending, running, completed, failed, rolled_back
+  progress        Json?
+  statistics      Json?
+  errors          Json?
+  rollbackPlan    Json?
+  createdAt       DateTime @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+
+  plan            ConsolidationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@map("consolidation_executions")
+}

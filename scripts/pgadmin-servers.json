@@ -1,0 +1,15 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Visiobook Core Database",
+      "Group": "Development",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "visiobook_core_db",
+      "Username": "postgres",
+      "Password": "password",
+      "SSLMode": "prefer",
+      "Comment": "Visiobook Core Database Service - Development Environment"
+    }
+  }
+}
