@@ -316,4 +316,3 @@ api-docs/
 # Custom ignores
 .Cline/
 dist/
-package-lock.json
