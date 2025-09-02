@@ -3,7 +3,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 
-async function bootstrap(): Promise<void> {
+export async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
 
   const app = await NestFactory.create(AppModule);
@@ -39,8 +39,11 @@ async function bootstrap(): Promise<void> {
   logger.log(`📖 API documentation: http://localhost:${port}/api/v1/docs`);
 }
 
-bootstrap().catch(error => {
-  const logger = new Logger('Bootstrap');
-  logger.error('Failed to start application:', error);
-  process.exit(1);
-});
+// Only run bootstrap if this file is executed directly (not during testing)
+if (require.main === module) {
+  bootstrap().catch(error => {
+    const logger = new Logger('Bootstrap');
+    logger.error('Failed to start application:', error);
+    process.exit(1);
+  });
+}
