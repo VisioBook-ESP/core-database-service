@@ -1,0 +1,142 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "core-database-service.fullname" . }}
+  labels:
+    {{- include "core-database-service.labels" . | nindent 4 }}
+  {{- with .Values.networkPolicy.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "core-database-service.selectorLabels" . | nindent 6 }}
+  policyTypes:
+  {{- range .Values.networkPolicy.policyTypes }}
+  - {{ . }}
+  {{- end }}
+  {{- if .Values.networkPolicy.ingress }}
+  ingress:
+  {{- range .Values.networkPolicy.ingress }}
+  - {{- if .from }}
+    from:
+    {{- range .from }}
+    {{- if .podSelector }}
+    - podSelector:
+        {{- if .podSelector.matchLabels }}
+        matchLabels:
+          {{- toYaml .podSelector.matchLabels | nindent 10 }}
+        {{- end }}
+        {{- if .podSelector.matchExpressions }}
+        matchExpressions:
+          {{- toYaml .podSelector.matchExpressions | nindent 10 }}
+        {{- end }}
+      {{- if .namespaceSelector }}
+      namespaceSelector:
+        {{- if .namespaceSelector.matchLabels }}
+        matchLabels:
+          {{- toYaml .namespaceSelector.matchLabels | nindent 10 }}
+        {{- end }}
+        {{- if .namespaceSelector.matchExpressions }}
+        matchExpressions:
+          {{- toYaml .namespaceSelector.matchExpressions | nindent 10 }}
+        {{- end }}
+      {{- end }}
+    {{- else if .namespaceSelector }}
+    - namespaceSelector:
+        {{- if .namespaceSelector.matchLabels }}
+        matchLabels:
+          {{- toYaml .namespaceSelector.matchLabels | nindent 10 }}
+        {{- end }}
+        {{- if .namespaceSelector.matchExpressions }}
+        matchExpressions:
+          {{- toYaml .namespaceSelector.matchExpressions | nindent 10 }}
+        {{- end }}
+    {{- else if .ipBlock }}
+    - ipBlock:
+        cidr: {{ .ipBlock.cidr }}
+        {{- if .ipBlock.except }}
+        except:
+        {{- range .ipBlock.except }}
+        - {{ . }}
+        {{- end }}
+        {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if .ports }}
+    ports:
+    {{- range .ports }}
+    - protocol: {{ .protocol | default "TCP" }}
+      port: {{ .port }}
+      {{- if .endPort }}
+      endPort: {{ .endPort }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.networkPolicy.egress }}
+  egress:
+  {{- range .Values.networkPolicy.egress }}
+  - {{- if .to }}
+    to:
+    {{- range .to }}
+    {{- if .podSelector }}
+    - podSelector:
+        {{- if .podSelector.matchLabels }}
+        matchLabels:
+          {{- toYaml .podSelector.matchLabels | nindent 10 }}
+        {{- end }}
+        {{- if .podSelector.matchExpressions }}
+        matchExpressions:
+          {{- toYaml .podSelector.matchExpressions | nindent 10 }}
+        {{- end }}
+      {{- if .namespaceSelector }}
+      namespaceSelector:
+        {{- if .namespaceSelector.matchLabels }}
+        matchLabels:
+          {{- toYaml .namespaceSelector.matchLabels | nindent 10 }}
+        {{- end }}
+        {{- if .namespaceSelector.matchExpressions }}
+        matchExpressions:
+          {{- toYaml .namespaceSelector.matchExpressions | nindent 10 }}
+        {{- end }}
+      {{- end }}
+    {{- else if .namespaceSelector }}
+    - namespaceSelector:
+        {{- if .namespaceSelector.matchLabels }}
+        matchLabels:
+          {{- toYaml .namespaceSelector.matchLabels | nindent 10 }}
+        {{- end }}
+        {{- if .namespaceSelector.matchExpressions }}
+        matchExpressions:
+          {{- toYaml .namespaceSelector.matchExpressions | nindent 10 }}
+        {{- end }}
+    {{- else if .ipBlock }}
+    - ipBlock:
+        cidr: {{ .ipBlock.cidr }}
+        {{- if .ipBlock.except }}
+        except:
+        {{- range .ipBlock.except }}
+        - {{ . }}
+        {{- end }}
+        {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if .ports }}
+    ports:
+    {{- range .ports }}
+    - protocol: {{ .protocol | default "TCP" }}
+      port: {{ .port }}
+      {{- if .endPort }}
+      endPort: {{ .endPort }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}

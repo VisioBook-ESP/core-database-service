@@ -1,0 +1,95 @@
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "core-database-service.fullname" . }}
+  labels:
+    {{- include "core-database-service.labels" . | nindent 4 }}
+    {{- include "core-database-service.istioLabels" . | nindent 4 }}
+  {{- with .Values.istio.virtualService.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  hosts:
+  {{- range .Values.istio.virtualService.hosts }}
+  - {{ . | quote }}
+  {{- end }}
+  {{- if .Values.istio.virtualService.gateways }}
+  gateways:
+  {{- range .Values.istio.virtualService.gateways }}
+  - {{ . | quote }}
+  {{- end }}
+  {{- end }}
+  http:
+  {{- range .Values.istio.virtualService.http }}
+  - match:
+    {{- range .match }}
+    - {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- if .route }}
+    route:
+    {{- range .route }}
+    - destination:
+        host: {{ include "core-database-service.fullname" $ }}
+        {{- if .subset }}
+        subset: {{ .subset }}
+        {{- end }}
+        port:
+          number: {{ $.Values.service.port }}
+      {{- if .weight }}
+      weight: {{ .weight }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if .redirect }}
+    redirect:
+      {{- toYaml .redirect | nindent 6 }}
+    {{- end }}
+    {{- if .rewrite }}
+    rewrite:
+      {{- toYaml .rewrite | nindent 6 }}
+    {{- end }}
+    {{- if .timeout }}
+    timeout: {{ .timeout }}
+    {{- end }}
+    {{- if .retries }}
+    retries:
+      {{- toYaml .retries | nindent 6 }}
+    {{- end }}
+    {{- if .fault }}
+    fault:
+      {{- toYaml .fault | nindent 6 }}
+    {{- end }}
+    {{- if .headers }}
+    headers:
+      {{- toYaml .headers | nindent 6 }}
+    {{- end }}
+    {{- if .corsPolicy }}
+    corsPolicy:
+      {{- toYaml .corsPolicy | nindent 6 }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.istio.virtualService.tcp }}
+  tcp:
+  {{- range .Values.istio.virtualService.tcp }}
+  - match:
+    {{- range .match }}
+    - {{- toYaml . | nindent 6 }}
+    {{- end }}
+    route:
+    {{- range .route }}
+    - destination:
+        host: {{ include "core-database-service.fullname" $ }}
+        {{- if .subset }}
+        subset: {{ .subset }}
+        {{- end }}
+        port:
+          number: {{ $.Values.service.port }}
+      {{- if .weight }}
+      weight: {{ .weight }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}

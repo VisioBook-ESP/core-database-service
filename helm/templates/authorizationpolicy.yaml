@@ -1,0 +1,172 @@
+{{- if and .Values.istio.enabled .Values.istio.authorizationPolicy.enabled }}
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ include "core-database-service.fullname" . }}
+  labels:
+    {{- include "core-database-service.labels" . | nindent 4 }}
+    {{- include "core-database-service.istioLabels" . | nindent 4 }}
+  {{- with .Values.istio.authorizationPolicy.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.istio.authorizationPolicy.selector }}
+  selector:
+    matchLabels:
+      {{- include "core-database-service.selectorLabels" . | nindent 6 }}
+      {{- with .Values.istio.authorizationPolicy.selector.matchLabels }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+  {{- end }}
+  {{- if .Values.istio.authorizationPolicy.action }}
+  action: {{ .Values.istio.authorizationPolicy.action | upper }}
+  {{- end }}
+  {{- if .Values.istio.authorizationPolicy.rules }}
+  rules:
+  {{- range .Values.istio.authorizationPolicy.rules }}
+  - {{- if .from }}
+    from:
+    {{- range .from }}
+    - {{- if .source }}
+      source:
+        {{- if .source.principals }}
+        principals:
+        {{- range .source.principals }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .source.requestPrincipals }}
+        requestPrincipals:
+        {{- range .source.requestPrincipals }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .source.namespaces }}
+        namespaces:
+        {{- range .source.namespaces }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .source.ipBlocks }}
+        ipBlocks:
+        {{- range .source.ipBlocks }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .source.remoteIpBlocks }}
+        remoteIpBlocks:
+        {{- range .source.remoteIpBlocks }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .source.notPrincipals }}
+        notPrincipals:
+        {{- range .source.notPrincipals }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .source.notRequestPrincipals }}
+        notRequestPrincipals:
+        {{- range .source.notRequestPrincipals }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .source.notNamespaces }}
+        notNamespaces:
+        {{- range .source.notNamespaces }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .source.notIpBlocks }}
+        notIpBlocks:
+        {{- range .source.notIpBlocks }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .source.notRemoteIpBlocks }}
+        notRemoteIpBlocks:
+        {{- range .source.notRemoteIpBlocks }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if .to }}
+    to:
+    {{- range .to }}
+    - {{- if .operation }}
+      operation:
+        {{- if .operation.methods }}
+        methods:
+        {{- range .operation.methods }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .operation.hosts }}
+        hosts:
+        {{- range .operation.hosts }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .operation.ports }}
+        ports:
+        {{- range .operation.ports }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .operation.paths }}
+        paths:
+        {{- range .operation.paths }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .operation.notMethods }}
+        notMethods:
+        {{- range .operation.notMethods }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .operation.notHosts }}
+        notHosts:
+        {{- range .operation.notHosts }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .operation.notPorts }}
+        notPorts:
+        {{- range .operation.notPorts }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .operation.notPaths }}
+        notPaths:
+        {{- range .operation.notPaths }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if .when }}
+    when:
+    {{- range .when }}
+    - key: {{ .key | quote }}
+      {{- if .values }}
+      values:
+      {{- range .values }}
+      - {{ . | quote }}
+      {{- end }}
+      {{- end }}
+      {{- if .notValues }}
+      notValues:
+      {{- range .notValues }}
+      - {{ . | quote }}
+      {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}
