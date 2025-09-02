@@ -191,7 +191,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ghcr.io/visiobook-esp/core-database-service:latest ./
+          docker build -f docker/Dockerfile -t ghcr.io/visiobook-esp/core-database-service:latest ./
 
       - name: Push Docker image
         run: |
