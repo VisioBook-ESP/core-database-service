@@ -64,3 +64,6 @@ node_modules/@prisma/client/
 *.zip
 *.tar.gz
 *.rar
+
+# Helm templates (contain Go templating syntax that conflicts with YAML parsing)
+helm/templates/

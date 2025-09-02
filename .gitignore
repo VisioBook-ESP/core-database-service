@@ -252,7 +252,6 @@ prisma/migrations/
 
 # Docker
 .dockerignore
-Dockerfile
 docker-compose*.yml
 
 # Testing
