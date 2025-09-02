@@ -1,10 +1,9 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
-import { Logger } from '@nestjs/common';
 
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
 
   const app = await NestFactory.create(AppModule);
@@ -40,7 +39,8 @@ async function bootstrap() {
   logger.log(`📖 API documentation: http://localhost:${port}/api/v1/docs`);
 }
 
-bootstrap().catch((error) => {
-  console.error('Failed to start application:', error);
+bootstrap().catch(error => {
+  const logger = new Logger('Bootstrap');
+  logger.error('Failed to start application:', error);
   process.exit(1);
 });

@@ -13,13 +13,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           url: configService.get('DATABASE_URL'),
         },
       },
-      log: configService.get('NODE_ENV') === 'development'
-        ? ['query', 'info', 'warn', 'error']
-        : ['error'],
+      log: configService.get('NODE_ENV') === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
     });
   }
 
-  async onModuleInit() {
+  public async onModuleInit(): Promise<void> {
     try {
       await this.$connect();
       this.logger.log('✅ Connected to PostgreSQL database');
@@ -29,7 +27,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }
   }
 
-  async onModuleDestroy() {
+  public async onModuleDestroy(): Promise<void> {
     try {
       await this.$disconnect();
       this.logger.log('🔌 Disconnected from PostgreSQL database');
@@ -38,7 +36,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }
   }
 
-  async healthCheck(): Promise<boolean> {
+  public async healthCheck(): Promise<boolean> {
     try {
       await this.$queryRaw`SELECT 1`;
       return true;
@@ -48,7 +46,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }
   }
 
-  async getConnectionInfo() {
+  public async getConnectionInfo(): Promise<unknown> {
     try {
       const result = await this.$queryRaw`
         SELECT

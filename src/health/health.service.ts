@@ -26,7 +26,7 @@ export class HealthService {
     private readonly redisService: RedisService,
   ) {}
 
-  async getHealthStatus(): Promise<HealthStatus> {
+  public async getHealthStatus(): Promise<HealthStatus> {
     const status: HealthStatus = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -40,9 +40,7 @@ export class HealthService {
     };
 
     // Determine overall health based on service status
-    const hasUnhealthyServices = Object.values(status.services).some(
-      (serviceStatus) => serviceStatus === 'disconnected',
-    );
+    const hasUnhealthyServices = Object.values(status.services).some(serviceStatus => serviceStatus === 'disconnected');
 
     if (hasUnhealthyServices) {
       status.status = 'unhealthy';
@@ -51,7 +49,7 @@ export class HealthService {
     return status;
   }
 
-  async getReadinessStatus(): Promise<{ ready: boolean; checks: any }> {
+  public async getReadinessStatus(): Promise<{ ready: boolean; checks: Record<string, boolean> }> {
     const databaseStatus = await this.checkDatabaseConnection();
     const redisStatus = await this.checkRedisConnection();
 
@@ -65,7 +63,7 @@ export class HealthService {
     return { ready, checks };
   }
 
-  async getLivenessStatus(): Promise<{ alive: boolean }> {
+  public getLivenessStatus(): { alive: boolean } {
     // Simple liveness check - if we can respond, we're alive
     return { alive: true };
   }
