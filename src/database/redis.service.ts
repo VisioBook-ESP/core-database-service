@@ -16,7 +16,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   constructor(@Inject('REDIS_CONFIG') private readonly config: RedisConfig) {}
 
-  async onModuleInit() {
+  public async onModuleInit(): Promise<void> {
     try {
       this.client = new Redis({
         host: this.config.host,
@@ -31,7 +31,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         this.logger.log('✅ Connected to Redis');
       });
 
-      this.client.on('error', (error) => {
+      this.client.on('error', error => {
         this.logger.error('❌ Redis connection error:', error);
       });
 
@@ -50,7 +50,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async onModuleDestroy() {
+  public async onModuleDestroy(): Promise<void> {
     try {
       if (this.client) {
         await this.client.quit();
@@ -61,7 +61,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async healthCheck(): Promise<boolean> {
+  public async healthCheck(): Promise<boolean> {
     try {
       const result = await this.client.ping();
       return result === 'PONG';
@@ -71,7 +71,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async get(key: string): Promise<string | null> {
+  public async get(key: string): Promise<string | null> {
     try {
       return await this.client.get(key);
     } catch (error) {
@@ -80,7 +80,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
+  public async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
     try {
       if (ttlSeconds) {
         await this.client.setex(key, ttlSeconds, value);
@@ -93,7 +93,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async del(key: string): Promise<number> {
+  public async del(key: string): Promise<number> {
     try {
       return await this.client.del(key);
     } catch (error) {
@@ -102,7 +102,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async exists(key: string): Promise<boolean> {
+  public async exists(key: string): Promise<boolean> {
     try {
       const result = await this.client.exists(key);
       return result === 1;
@@ -112,7 +112,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async hget(key: string, field: string): Promise<string | null> {
+  public async hget(key: string, field: string): Promise<string | null> {
     try {
       return await this.client.hget(key, field);
     } catch (error) {
@@ -121,7 +121,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async hset(key: string, field: string, value: string): Promise<void> {
+  public async hset(key: string, field: string, value: string): Promise<void> {
     try {
       await this.client.hset(key, field, value);
     } catch (error) {
@@ -130,7 +130,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async hgetall(key: string): Promise<Record<string, string>> {
+  public async hgetall(key: string): Promise<Record<string, string>> {
     try {
       return await this.client.hgetall(key);
     } catch (error) {
@@ -139,7 +139,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async expire(key: string, seconds: number): Promise<boolean> {
+  public async expire(key: string, seconds: number): Promise<boolean> {
     try {
       const result = await this.client.expire(key, seconds);
       return result === 1;
@@ -149,7 +149,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async flushdb(): Promise<void> {
+  public async flushdb(): Promise<void> {
     try {
       await this.client.flushdb();
     } catch (error) {
@@ -158,7 +158,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  getClient(): Redis {
+  public getClient(): Redis {
     return this.client;
   }
 }

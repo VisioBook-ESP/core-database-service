@@ -1,0 +1,33 @@
+{{- if and .Values.istio.enabled .Values.istio.peerAuthentication.enabled }}
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: {{ include "core-database-service.fullname" . }}
+  labels:
+    {{- include "core-database-service.labels" . | nindent 4 }}
+    {{- include "core-database-service.istioLabels" . | nindent 4 }}
+  {{- with .Values.istio.peerAuthentication.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.istio.peerAuthentication.selector }}
+  selector:
+    matchLabels:
+      {{- include "core-database-service.selectorLabels" . | nindent 6 }}
+      {{- with .Values.istio.peerAuthentication.selector.matchLabels }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+  {{- end }}
+  {{- if .Values.istio.peerAuthentication.mtls }}
+  mtls:
+    mode: {{ .Values.istio.peerAuthentication.mtls.mode | upper }}
+  {{- end }}
+  {{- if .Values.istio.peerAuthentication.portLevelMtls }}
+  portLevelMtls:
+  {{- range $port, $config := .Values.istio.peerAuthentication.portLevelMtls }}
+    {{ $port }}:
+      mode: {{ $config.mode | upper }}
+  {{- end }}
+  {{- end }}
+{{- end }}

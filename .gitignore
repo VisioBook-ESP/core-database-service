@@ -252,8 +252,6 @@ prisma/migrations/
 
 # Docker
 .dockerignore
-Dockerfile
-docker-compose*.yml
 
 # Testing
 coverage/
@@ -315,6 +313,6 @@ api-docs/
 .temp/
 
 # Custom ignores
+.claude/
 .Cline/
 dist/
-package-lock.json

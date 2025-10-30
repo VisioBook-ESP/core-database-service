@@ -1,0 +1,93 @@
+{{- if .Values.configMap.create }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "core-database-service.fullname" . }}
+  labels:
+    {{- include "core-database-service.labels" . | nindent 4 }}
+  {{- with .Values.configMap.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  {{- with .Values.configMap.data }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+  # Application configuration
+  NODE_ENV: {{ .Values.app.nodeEnv | quote }}
+  LOG_LEVEL: {{ .Values.app.logLevel | quote }}
+  PORT: {{ .Values.service.port | quote }}
+
+  # Database configuration
+  {{- if .Values.database.host }}
+  DATABASE_HOST: {{ .Values.database.host | quote }}
+  {{- end }}
+  {{- if .Values.database.port }}
+  DATABASE_PORT: {{ .Values.database.port | quote }}
+  {{- end }}
+  {{- if .Values.database.name }}
+  DATABASE_NAME: {{ .Values.database.name | quote }}
+  {{- end }}
+  {{- if .Values.database.ssl }}
+  DATABASE_SSL: {{ .Values.database.ssl | quote }}
+  {{- end }}
+  {{- if .Values.database.poolSize }}
+  DATABASE_POOL_SIZE: {{ .Values.database.poolSize | quote }}
+  {{- end }}
+  {{- if .Values.database.connectionTimeout }}
+  DATABASE_CONNECTION_TIMEOUT: {{ .Values.database.connectionTimeout | quote }}
+  {{- end }}
+
+  # Redis configuration
+  {{- if .Values.redis.host }}
+  REDIS_HOST: {{ .Values.redis.host | quote }}
+  {{- end }}
+  {{- if .Values.redis.port }}
+  REDIS_PORT: {{ .Values.redis.port | quote }}
+  {{- end }}
+  {{- if .Values.redis.db }}
+  REDIS_DB: {{ .Values.redis.db | quote }}
+  {{- end }}
+  {{- if .Values.redis.keyPrefix }}
+  REDIS_KEY_PREFIX: {{ .Values.redis.keyPrefix | quote }}
+  {{- end }}
+  {{- if .Values.redis.ttl }}
+  REDIS_TTL: {{ .Values.redis.ttl | quote }}
+  {{- end }}
+  {{- if .Values.redis.maxRetries }}
+  REDIS_MAX_RETRIES: {{ .Values.redis.maxRetries | quote }}
+  {{- end }}
+  {{- if .Values.redis.retryDelayOnFailover }}
+  REDIS_RETRY_DELAY_ON_FAILOVER: {{ .Values.redis.retryDelayOnFailover | quote }}
+  {{- end }}
+
+  # Health check configuration
+  {{- if .Values.healthCheck.timeout }}
+  HEALTH_CHECK_TIMEOUT: {{ .Values.healthCheck.timeout | quote }}
+  {{- end }}
+  {{- if .Values.healthCheck.interval }}
+  HEALTH_CHECK_INTERVAL: {{ .Values.healthCheck.interval | quote }}
+  {{- end }}
+
+  # Monitoring configuration
+  {{- if .Values.monitoring.enabled }}
+  MONITORING_ENABLED: {{ .Values.monitoring.enabled | quote }}
+  {{- end }}
+  {{- if .Values.monitoring.metricsPath }}
+  METRICS_PATH: {{ .Values.monitoring.metricsPath | quote }}
+  {{- end }}
+
+  # Circuit breaker configuration
+  {{- if .Values.circuitBreaker.enabled }}
+  CIRCUIT_BREAKER_ENABLED: {{ .Values.circuitBreaker.enabled | quote }}
+  {{- end }}
+  {{- if .Values.circuitBreaker.failureThreshold }}
+  CIRCUIT_BREAKER_FAILURE_THRESHOLD: {{ .Values.circuitBreaker.failureThreshold | quote }}
+  {{- end }}
+  {{- if .Values.circuitBreaker.resetTimeout }}
+  CIRCUIT_BREAKER_RESET_TIMEOUT: {{ .Values.circuitBreaker.resetTimeout | quote }}
+  {{- end }}
+  {{- if .Values.circuitBreaker.monitoringPeriod }}
+  CIRCUIT_BREAKER_MONITORING_PERIOD: {{ .Values.circuitBreaker.monitoringPeriod | quote }}
+  {{- end }}
+{{- end }}

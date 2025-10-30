@@ -1,0 +1,30 @@
+# Development overrides for docker-compose.yml
+# This file is automatically loaded by docker-compose and provides development-specific configurations
+
+version: '3.8'
+
+services:
+  # PostgreSQL Development Overrides
+  postgres:
+    environment:
+      # Enable more verbose logging in development
+      POSTGRES_LOG_STATEMENT: all
+      POSTGRES_LOG_MIN_DURATION_STATEMENT: 0
+    volumes:
+      # Mount additional development scripts
+      - ./scripts/dev-seed.sql:/docker-entrypoint-initdb.d/99-dev-seed.sql:ro
+
+  # Redis Development Overrides
+  redis:
+    # Enable Redis logging in development
+    command: redis-server --appendonly yes --requirepass "" --loglevel verbose
+
+  # pgAdmin Development Overrides
+  pgadmin:
+    environment:
+      # Development-friendly settings
+      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: 'False'
+      PGADMIN_CONFIG_LOGIN_BANNER: '"Visiobook Core Database Service - Development Environment"'
+    volumes:
+      # Pre-configure server connections for development
+      - ./scripts/pgadmin-servers.json:/pgadmin4/servers.json:ro

@@ -10,8 +10,14 @@ import { RedisService } from './redis.service';
     RedisService,
     {
       provide: 'DATABASE_CONFIG',
-      useFactory: (configService: ConfigService) => ({
-        databaseUrl: configService.get('DATABASE_URL'),
+      useFactory: (
+        configService: ConfigService,
+      ): {
+        databaseUrl: string;
+        maxConnections: number;
+        connectionTimeout: number;
+      } => ({
+        databaseUrl: configService.get('DATABASE_URL') ?? '',
         maxConnections: configService.get('DB_MAX_CONNECTIONS', 10),
         connectionTimeout: configService.get('DB_CONNECTION_TIMEOUT', 30000),
       }),
@@ -19,7 +25,15 @@ import { RedisService } from './redis.service';
     },
     {
       provide: 'REDIS_CONFIG',
-      useFactory: (configService: ConfigService) => ({
+      useFactory: (
+        configService: ConfigService,
+      ): {
+        host: string;
+        port: number;
+        password?: string;
+        db: number;
+        maxRetriesPerRequest: number;
+      } => ({
         host: configService.get('REDIS_HOST', 'localhost'),
         port: configService.get('REDIS_PORT', 6379),
         password: configService.get('REDIS_PASSWORD'),

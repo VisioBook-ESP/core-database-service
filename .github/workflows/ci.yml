@@ -1,0 +1,310 @@
+name: Core Database Service CI
+
+on:
+  push:
+    branches: [main, develop, feature/*]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 1. Organization Runner Test (following your pattern)
+  org-runner-test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "✅ Running Core Database Service CI on organization runner!"
+
+  # 2. Code Quality & Security
+  code-quality:
+    runs-on: ubuntu-latest
+    needs: org-runner-test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint:check
+
+      - name: Check Prettier formatting
+        run: npm run format:check
+
+      - name: TypeScript type checking
+        run: npx tsc --noEmit
+
+      - name: Security audit
+        run: npm audit --audit-level=high
+
+  # 3. Build Application (following your pattern)
+  build-app:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Build application
+        run: npm run build
+
+  # 4. Unit Tests (following your naming)
+  unite-test-app:
+    runs-on: ubuntu-latest
+    needs: build-app
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Run tests with coverage
+        run: npm run test:cov
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/test_db
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          NODE_ENV: test
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          file: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+
+  # 5. Helm Chart Validation
+  helm-validation:
+    runs-on: ubuntu-latest
+    needs: org-runner-test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.14.0
+
+      - name: Lint Helm charts
+        run: |
+          echo "🔍 Linting Helm charts..."
+          helm lint helm/
+          echo "🔍 Linting Helm charts with production values..."
+          helm lint helm/ -f helm/values-prod.yaml
+
+      - name: Template validation
+        run: |
+          echo "🔍 Validating Helm templates (development)..."
+          helm template core-database-service helm/ --dry-run > /dev/null
+          echo "🔍 Validating Helm templates (production)..."
+          helm template core-database-service helm/ -f helm/values-prod.yaml --dry-run > /dev/null
+          echo "✅ Helm chart validation passed!"
+
+  # 6. Docker Build & Push (following your exact pattern)
+  docker-build-and-push:
+    runs-on: ubuntu-latest
+    needs: [unite-test-app, helm-validation]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/visiobook-esp/core-database-service
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build Docker image
+        run: |
+          docker build -f docker/Dockerfile -t ghcr.io/visiobook-esp/core-database-service:latest ./
+
+      - name: Push Docker image
+        run: |
+          docker push ghcr.io/visiobook-esp/core-database-service:latest
+
+#  # 7. Minikube Deployment Test (following your pattern)
+#  minikube:
+#    name: 🏗️ Deploy & Test Core Database Service on Minikube
+#    runs-on: ubuntu-latest
+#    needs: docker-build-and-push
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Install kubectl
+#        run: |
+#          KUBECTL_VERSION="v1.30.1"
+#          curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+#          chmod +x kubectl
+#          sudo mv kubectl /usr/local/bin/kubectl
+#
+#      - name: Setup Minikube
+#        uses: medyagh/setup-minikube@latest
+#        with:
+#          kubernetes-version: v1.30.1
+#          driver: docker
+#          container-runtime: containerd
+#
+#      - name: Set up Helm
+#        uses: azure/setup-helm@v3
+#        with:
+#          version: v3.14.0
+#
+#      - name: Load Docker image into Minikube
+#        run: |
+#          # Pull the image we just built
+#          docker pull ghcr.io/visiobook-esp/core-database-service:latest
+#          # Load it into Minikube
+#          minikube image load ghcr.io/visiobook-esp/core-database-service:latest
+#
+#      - name: Deploy Core Database Service Chart
+#        run: |
+#          echo "🚀 Deploying Core Database Service to Minikube..."
+#          helm install core-database-service helm/ \
+#            --set image.repository=ghcr.io/visiobook-esp/core-database-service \
+#            --set image.tag=latest \
+#            --set image.pullPolicy=Never \
+#            --set database.url="postgresql://postgres:password@localhost:5432/visiobook_dev" \
+#            --set redis.host=localhost \
+#            --set istio.enabled=false \
+#            --wait --timeout=300s
+#
+#          release="core-database-service"
+#          namespace="default"
+#
+#          echo "⏳ Checking if all pods for $release are running..."
+#
+#          ATTEMPTS=0
+#          MAX_ATTEMPTS=10
+#          SLEEP_TIME=10
+#          READY=false
+#
+#          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+#            echo "🔄 Attempt $((ATTEMPTS+1))/$MAX_ATTEMPTS..."
+#
+#            kubectl get pods -n $namespace
+#
+#            NOT_READY=$(kubectl get pods -l "app.kubernetes.io/instance=$release" -n $namespace \
+#              --no-headers | grep -v 'Running' || true)
+#
+#            if [ -z "$NOT_READY" ]; then
+#              echo "✅ All pods for $release are running!"
+#              READY=true
+#              break
+#            fi
+#
+#            echo "⏳ Some pods are not yet running. Waiting $SLEEP_TIME seconds..."
+#            ATTEMPTS=$((ATTEMPTS+1))
+#            sleep $SLEEP_TIME
+#          done
+#
+#          if [ "$READY" = false ]; then
+#            echo "❌ Deployment failed - pods not ready after $MAX_ATTEMPTS attempts"
+#            kubectl describe pods -l "app.kubernetes.io/instance=$release" -n $namespace
+#            kubectl logs -l "app.kubernetes.io/instance=$release" -n $namespace --tail=50
+#            exit 1
+#          fi
+#
+#      - name: Test Health Endpoints
+#        run: |
+#          echo "🔍 Testing health endpoints..."
+#          kubectl port-forward svc/core-database-service 3000:3000 &
+#          PF_PID=$!
+#
+#          # Wait for port-forward to be ready
+#          sleep 10
+#
+#          # Test health endpoints
+#          echo "Testing liveness endpoint..."
+#          curl -f http://localhost:3000/api/v1/health/live || exit 1
+#
+#          echo "Testing readiness endpoint..."
+#          curl -f http://localhost:3000/api/v1/health/ready || exit 1
+#
+#          echo "Testing general health endpoint..."
+#          curl -f http://localhost:3000/api/v1/health || exit 1
+#
+#          # Clean up port-forward
+#          kill $PF_PID
+#
+#          echo "✅ All health checks passed!"
+
+#      - name: Cleanup
+#        if: always()
+#        run: |
+#          helm uninstall core-database-service || true
+#          minikube delete || true

@@ -1,0 +1,263 @@
+# Default values for core-database-service (Development Environment)
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+# Image configuration
+image:
+  registry: ""
+  repository: visiobook/core-database-service
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Name overrides
+nameOverride: ""
+fullnameOverride: ""
+
+# Replica configuration
+replicaCount: 1
+
+# Service account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod annotations and labels
+podAnnotations: {}
+podLabels: {}
+
+# Security context
+podSecurityContext:
+  fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 3000
+  targetPort: 3000
+  annotations: {}
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+# Liveness and readiness probes
+livenessProbe:
+  httpGet:
+    path: /api/v1/health/live
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /api/v1/health/ready
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Autoscaling (disabled for dev)
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Pod Disruption Budget (disabled for dev)
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# Node selection
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Application configuration
+app:
+  nodeEnv: development
+  logLevel: debug
+  port: 3000
+  apiPrefix: "/api/v1"
+
+# Environment variables
+env:
+  NODE_ENV: development
+  LOG_LEVEL: debug
+  PORT: "3000"
+  API_PREFIX: "/api/v1"
+
+# Database configuration
+database:
+  # Use existing secret for credentials
+  existingSecret: ""
+  # Or provide direct URL (for dev only)
+  url: "postgresql://postgres:password@localhost:5432/visiobook_dev"
+  # Individual components (when using existingSecret)
+  host: "localhost"
+  port: 5432
+  name: "visiobook_dev"
+  # Connection pool settings
+  maxConnections: 10
+  connectionTimeout: 30000
+
+# Redis configuration
+redis:
+  host: "localhost"
+  port: 6379
+  database: 0
+  password: ""
+  maxRetriesPerRequest: 3
+
+# Istio service mesh configuration
+istio:
+  enabled: true
+  # Virtual Service configuration
+  virtualService:
+    enabled: true
+    gateways: []
+    hosts:
+      - core-database-service
+    http:
+      - match:
+          - uri:
+              prefix: /api/v1
+        route:
+          - destination:
+              host: core-database-service
+              port:
+                number: 3000
+        retries:
+          attempts: 3
+          perTryTimeout: 30s
+        timeout: 60s
+
+  # Destination Rule configuration
+  destinationRule:
+    enabled: true
+    trafficPolicy:
+      loadBalancer:
+        simple: LEAST_CONN
+      circuitBreaker:
+        consecutiveErrors: 5
+        interval: 30s
+        baseEjectionTime: 30s
+        maxEjectionPercent: 50
+      connectionPool:
+        tcp:
+          maxConnections: 100
+        http:
+          http1MaxPendingRequests: 10
+          maxRequestsPerConnection: 2
+
+  # Peer Authentication (mTLS)
+  peerAuthentication:
+    enabled: true
+    mode: PERMISSIVE # PERMISSIVE for dev, STRICT for prod
+
+  # Authorization Policy
+  authorizationPolicy:
+    enabled: false # Disabled for dev environment
+    rules: []
+
+# Ingress (disabled when using Istio)
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: core-database-service.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# ConfigMap for application configuration
+configMap:
+  create: true
+  annotations: {}
+  data:
+    # Application specific configuration
+    cors.origins: "*"
+    api.timeout: "30000"
+    api.rateLimit.windowMs: "900000"
+    api.rateLimit.max: "100"
+
+# Secrets (for sensitive configuration)
+secret:
+  create: false
+  type: Opaque
+  annotations: {}
+  stringData: {}
+  data: {}
+
+# Additional volumes and volume mounts
+volumes: []
+volumeMounts: []
+
+# Init containers
+initContainers: []
+
+# Sidecar containers
+sidecars: []
+
+# Pod lifecycle hooks
+lifecycle: {}
+
+# Monitoring and observability
+monitoring:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    path: /metrics
+    labels: {}
+
+  # Prometheus annotations
+  prometheus:
+    scrape: true
+    port: "3000"
+    path: "/metrics"
+
+# Health check configuration
+healthCheck:
+  timeout: 5000
+  interval: 30000
+
+# Circuit breaker configuration
+circuitBreaker:
+  enabled: true
+  failureThreshold: 5
+  resetTimeout: 60000
+  monitoringPeriod: 10000
+
+# Network policies
+networkPolicy:
+  enabled: false
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress: []

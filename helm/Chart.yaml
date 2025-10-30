@@ -1,0 +1,24 @@
+apiVersion: v2
+name: core-database-service
+description: Visiobook Core Database Service - Centralized database consolidation microservice
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+home: https://github.com/VisioBook-ESP/core-database-service
+sources:
+  - https://github.com/VisioBook-ESP/core-database-service
+maintainers:
+  - name: Visiobook Team
+    email: dev@visiobook.com
+keywords:
+  - database
+  - microservice
+  - consolidation
+  - orm
+  - nestjs
+  - postgresql
+  - redis
+annotations:
+  category: Database
+  licenses: MIT
+dependencies: []

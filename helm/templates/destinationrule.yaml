@@ -1,0 +1,111 @@
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ include "core-database-service.fullname" . }}
+  labels:
+    {{- include "core-database-service.labels" . | nindent 4 }}
+    {{- include "core-database-service.istioLabels" . | nindent 4 }}
+  {{- with .Values.istio.destinationRule.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  host: {{ include "core-database-service.fullname" . }}
+  {{- if .Values.istio.destinationRule.trafficPolicy }}
+  trafficPolicy:
+    {{- if .Values.istio.destinationRule.trafficPolicy.loadBalancer }}
+    loadBalancer:
+      {{- toYaml .Values.istio.destinationRule.trafficPolicy.loadBalancer | nindent 6 }}
+    {{- end }}
+    {{- if .Values.istio.destinationRule.trafficPolicy.connectionPool }}
+    connectionPool:
+      {{- if .Values.istio.destinationRule.trafficPolicy.connectionPool.tcp }}
+      tcp:
+        {{- toYaml .Values.istio.destinationRule.trafficPolicy.connectionPool.tcp | nindent 8 }}
+      {{- end }}
+      {{- if .Values.istio.destinationRule.trafficPolicy.connectionPool.http }}
+      http:
+        {{- toYaml .Values.istio.destinationRule.trafficPolicy.connectionPool.http | nindent 8 }}
+      {{- end }}
+    {{- end }}
+    {{- if .Values.istio.destinationRule.trafficPolicy.outlierDetection }}
+    outlierDetection:
+      {{- toYaml .Values.istio.destinationRule.trafficPolicy.outlierDetection | nindent 6 }}
+    {{- end }}
+    {{- if .Values.istio.destinationRule.trafficPolicy.tls }}
+    tls:
+      {{- toYaml .Values.istio.destinationRule.trafficPolicy.tls | nindent 6 }}
+    {{- end }}
+    {{- if .Values.istio.destinationRule.trafficPolicy.portLevelSettings }}
+    portLevelSettings:
+    {{- range .Values.istio.destinationRule.trafficPolicy.portLevelSettings }}
+    - port:
+        number: {{ .port.number }}
+      {{- if .loadBalancer }}
+      loadBalancer:
+        {{- toYaml .loadBalancer | nindent 8 }}
+      {{- end }}
+      {{- if .connectionPool }}
+      connectionPool:
+        {{- if .connectionPool.tcp }}
+        tcp:
+          {{- toYaml .connectionPool.tcp | nindent 10 }}
+        {{- end }}
+        {{- if .connectionPool.http }}
+        http:
+          {{- toYaml .connectionPool.http | nindent 10 }}
+        {{- end }}
+      {{- end }}
+      {{- if .outlierDetection }}
+      outlierDetection:
+        {{- toYaml .outlierDetection | nindent 8 }}
+      {{- end }}
+      {{- if .tls }}
+      tls:
+        {{- toYaml .tls | nindent 8 }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.istio.destinationRule.subsets }}
+  subsets:
+  {{- range .Values.istio.destinationRule.subsets }}
+  - name: {{ .name }}
+    labels:
+      {{- toYaml .labels | nindent 6 }}
+    {{- if .trafficPolicy }}
+    trafficPolicy:
+      {{- if .trafficPolicy.loadBalancer }}
+      loadBalancer:
+        {{- toYaml .trafficPolicy.loadBalancer | nindent 8 }}
+      {{- end }}
+      {{- if .trafficPolicy.connectionPool }}
+      connectionPool:
+        {{- if .trafficPolicy.connectionPool.tcp }}
+        tcp:
+          {{- toYaml .trafficPolicy.connectionPool.tcp | nindent 10 }}
+        {{- end }}
+        {{- if .trafficPolicy.connectionPool.http }}
+        http:
+          {{- toYaml .trafficPolicy.connectionPool.http | nindent 10 }}
+        {{- end }}
+      {{- end }}
+      {{- if .trafficPolicy.outlierDetection }}
+      outlierDetection:
+        {{- toYaml .trafficPolicy.outlierDetection | nindent 8 }}
+      {{- end }}
+      {{- if .trafficPolicy.tls }}
+      tls:
+        {{- toYaml .trafficPolicy.tls | nindent 8 }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.istio.destinationRule.exportTo }}
+  exportTo:
+  {{- range .Values.istio.destinationRule.exportTo }}
+  - {{ . | quote }}
+  {{- end }}
+  {{- end }}
+{{- end }}
