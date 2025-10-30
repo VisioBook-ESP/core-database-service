@@ -6,11 +6,12 @@ describe('RedisService Integration', () => {
   let module: TestingModule;
 
   beforeEach(async () => {
+    // Use a separate database index for integration tests to avoid conflicts
     const mockRedisConfig: RedisConfig = {
       host: 'localhost',
       port: 6379,
       password: undefined,
-      db: 0,
+      db: 15, // Use db 15 for tests to isolate from development data
       maxRetriesPerRequest: 3,
     };
 
@@ -28,6 +29,16 @@ describe('RedisService Integration', () => {
   });
 
   afterEach(async () => {
+    // Clean up test data
+    try {
+      if (service) {
+        await service.flushdb();
+        await service.onModuleDestroy();
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
+
     if (module) {
       await module.close();
     }
@@ -37,237 +48,129 @@ describe('RedisService Integration', () => {
     expect(service).toBeDefined();
   });
 
-  it('should have constructor with proper configuration', () => {
-    expect(service).toBeDefined();
-    expect(typeof service.onModuleInit).toBe('function');
-    expect(typeof service.onModuleDestroy).toBe('function');
-    expect(typeof service.healthCheck).toBe('function');
-    expect(typeof service.getClient).toBe('function');
+  describe('Connection Lifecycle', () => {
+    it('should connect to real Redis instance', async () => {
+      await expect(service.onModuleInit()).resolves.not.toThrow();
+      expect(service.getClient()).toBeDefined();
+    });
+
+    it('should perform health check successfully', async () => {
+      await service.onModuleInit();
+
+      const result = await service.healthCheck();
+
+      expect(result).toBe(true);
+    });
+
+    it('should disconnect gracefully', async () => {
+      await service.onModuleInit();
+
+      await expect(service.onModuleDestroy()).resolves.not.toThrow();
+    });
   });
 
-  it('should handle onModuleInit gracefully', async () => {
-    // Mock Redis client methods to avoid actual Redis connection
-    const mockClient = {
-      connect: jest.fn().mockResolvedValue(undefined),
-      on: jest.fn(),
-      quit: jest.fn().mockResolvedValue('OK'),
-    };
+  describe('Basic Operations with Real Redis', () => {
+    beforeEach(async () => {
+      await service.onModuleInit();
+    });
 
-    // Set the client property directly to avoid constructor issues
-    (service as any).client = mockClient;
+    it('should set and get value successfully', async () => {
+      const testKey = 'integration-test-key';
+      const testValue = 'integration-test-value';
 
-    await expect(service.onModuleInit()).resolves.not.toThrow();
+      await service.set(testKey, testValue);
+      const result = await service.get(testKey);
+
+      expect(result).toBe(testValue);
+    });
+
+    it('should set value with TTL and retrieve it', async () => {
+      const testKey = 'integration-test-ttl-key';
+      const testValue = 'integration-test-ttl-value';
+
+      await service.set(testKey, testValue, 60); // 60 seconds TTL
+      const result = await service.get(testKey);
+
+      expect(result).toBe(testValue);
+    });
+
+    it('should handle key existence checks', async () => {
+      const testKey = 'integration-test-exists-key';
+
+      // Key should not exist initially
+      let exists = await service.exists(testKey);
+      expect(exists).toBe(false);
+
+      // Set the key
+      await service.set(testKey, 'value');
+
+      // Key should now exist
+      exists = await service.exists(testKey);
+      expect(exists).toBe(true);
+    });
+
+    it('should delete keys successfully', async () => {
+      const testKey = 'integration-test-del-key';
+
+      await service.set(testKey, 'value');
+      const deleteCount = await service.del(testKey);
+
+      expect(deleteCount).toBe(1);
+
+      const exists = await service.exists(testKey);
+      expect(exists).toBe(false);
+    });
   });
 
-  it('should handle onModuleDestroy gracefully', async () => {
-    const mockClient = {
-      quit: jest.fn().mockResolvedValue('OK'),
-    };
+  describe('Hash Operations with Real Redis', () => {
+    beforeEach(async () => {
+      await service.onModuleInit();
+    });
 
-    // Set the client property
-    (service as any).client = mockClient;
+    it('should set and get hash fields', async () => {
+      const hashKey = 'integration-test-hash';
+      const field = 'field1';
+      const value = 'value1';
 
-    await expect(service.onModuleDestroy()).resolves.not.toThrow();
+      await service.hset(hashKey, field, value);
+      const result = await service.hget(hashKey, field);
+
+      expect(result).toBe(value);
+    });
+
+    it('should get all hash fields', async () => {
+      const hashKey = 'integration-test-hash-all';
+
+      await service.hset(hashKey, 'field1', 'value1');
+      await service.hset(hashKey, 'field2', 'value2');
+
+      const result = await service.hgetall(hashKey);
+
+      expect(result).toEqual({
+        field1: 'value1',
+        field2: 'value2',
+      });
+    });
   });
 
-  it('should handle onModuleDestroy errors gracefully', async () => {
-    const mockClient = {
-      quit: jest.fn().mockRejectedValue(new Error('Quit failed')),
-    };
+  describe('Expiration with Real Redis', () => {
+    beforeEach(async () => {
+      await service.onModuleInit();
+    });
 
-    (service as any).client = mockClient;
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    it('should set expiration on existing key', async () => {
+      const testKey = 'integration-test-expire-key';
 
-    await expect(service.onModuleDestroy()).resolves.not.toThrow();
+      await service.set(testKey, 'value');
+      const result = await service.expire(testKey, 60);
 
-    consoleSpy.mockRestore();
-  });
+      expect(result).toBe(true);
+    });
 
-  it('should return true for successful health check', async () => {
-    const mockClient = {
-      ping: jest.fn().mockResolvedValue('PONG'),
-    };
+    it('should return false when setting expiration on non-existent key', async () => {
+      const result = await service.expire('non-existent-key', 60);
 
-    (service as any).client = mockClient;
-
-    const result = await service.healthCheck();
-
-    expect(result).toBe(true);
-  });
-
-  it('should return false for failed health check', async () => {
-    const mockClient = {
-      ping: jest.fn().mockRejectedValue(new Error('Ping failed')),
-    };
-
-    (service as any).client = mockClient;
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-
-    const result = await service.healthCheck();
-
-    expect(result).toBe(false);
-    consoleSpy.mockRestore();
-  });
-
-  it('should get value successfully', async () => {
-    const mockClient = {
-      get: jest.fn().mockResolvedValue('test-value'),
-    };
-
-    (service as any).client = mockClient;
-
-    const result = await service.get('test-key');
-
-    expect(result).toBe('test-value');
-    expect(mockClient.get).toHaveBeenCalledWith('test-key');
-  });
-
-  it('should handle get errors', async () => {
-    const mockClient = {
-      get: jest.fn().mockRejectedValue(new Error('Get failed')),
-    };
-
-    (service as any).client = mockClient;
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-
-    await expect(service.get('test-key')).rejects.toThrow('Get failed');
-
-    consoleSpy.mockRestore();
-  });
-
-  it('should set value without TTL', async () => {
-    const mockClient = {
-      set: jest.fn().mockResolvedValue('OK'),
-    };
-
-    (service as any).client = mockClient;
-
-    await expect(service.set('test-key', 'test-value')).resolves.not.toThrow();
-
-    expect(mockClient.set).toHaveBeenCalledWith('test-key', 'test-value');
-  });
-
-  it('should set value with TTL', async () => {
-    const mockClient = {
-      setex: jest.fn().mockResolvedValue('OK'),
-    };
-
-    (service as any).client = mockClient;
-
-    await expect(service.set('test-key', 'test-value', 3600)).resolves.not.toThrow();
-
-    expect(mockClient.setex).toHaveBeenCalledWith('test-key', 3600, 'test-value');
-  });
-
-  it('should handle set errors', async () => {
-    const mockClient = {
-      set: jest.fn().mockRejectedValue(new Error('Set failed')),
-    };
-
-    (service as any).client = mockClient;
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-
-    await expect(service.set('test-key', 'test-value')).rejects.toThrow('Set failed');
-
-    consoleSpy.mockRestore();
-  });
-
-  it('should delete key successfully', async () => {
-    const mockClient = {
-      del: jest.fn().mockResolvedValue(1),
-    };
-
-    (service as any).client = mockClient;
-
-    const result = await service.del('test-key');
-
-    expect(result).toBe(1);
-    expect(mockClient.del).toHaveBeenCalledWith('test-key');
-  });
-
-  it('should check key existence', async () => {
-    const mockClient = {
-      exists: jest.fn().mockResolvedValue(1),
-    };
-
-    (service as any).client = mockClient;
-
-    const result = await service.exists('test-key');
-
-    expect(result).toBe(true);
-    expect(mockClient.exists).toHaveBeenCalledWith('test-key');
-  });
-
-  it('should get hash field', async () => {
-    const mockClient = {
-      hget: jest.fn().mockResolvedValue('field-value'),
-    };
-
-    (service as any).client = mockClient;
-
-    const result = await service.hget('hash-key', 'field');
-
-    expect(result).toBe('field-value');
-    expect(mockClient.hget).toHaveBeenCalledWith('hash-key', 'field');
-  });
-
-  it('should set hash field', async () => {
-    const mockClient = {
-      hset: jest.fn().mockResolvedValue(1),
-    };
-
-    (service as any).client = mockClient;
-
-    await expect(service.hset('hash-key', 'field', 'value')).resolves.not.toThrow();
-
-    expect(mockClient.hset).toHaveBeenCalledWith('hash-key', 'field', 'value');
-  });
-
-  it('should get all hash fields', async () => {
-    const mockHash = { field1: 'value1', field2: 'value2' };
-    const mockClient = {
-      hgetall: jest.fn().mockResolvedValue(mockHash),
-    };
-
-    (service as any).client = mockClient;
-
-    const result = await service.hgetall('hash-key');
-
-    expect(result).toEqual(mockHash);
-    expect(mockClient.hgetall).toHaveBeenCalledWith('hash-key');
-  });
-
-  it('should set expiration successfully', async () => {
-    const mockClient = {
-      expire: jest.fn().mockResolvedValue(1),
-    };
-
-    (service as any).client = mockClient;
-
-    const result = await service.expire('test-key', 3600);
-
-    expect(result).toBe(true);
-    expect(mockClient.expire).toHaveBeenCalledWith('test-key', 3600);
-  });
-
-  it('should flush database successfully', async () => {
-    const mockClient = {
-      flushdb: jest.fn().mockResolvedValue('OK'),
-    };
-
-    (service as any).client = mockClient;
-
-    await expect(service.flushdb()).resolves.not.toThrow();
-
-    expect(mockClient.flushdb).toHaveBeenCalled();
-  });
-
-  it('should return Redis client', () => {
-    const mockClient = { test: 'client' };
-    (service as any).client = mockClient;
-
-    const result = service.getClient();
-
-    expect(result).toBe(mockClient);
+      expect(result).toBe(false);
+    });
   });
 });
