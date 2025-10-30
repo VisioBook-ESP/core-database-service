@@ -20,7 +20,7 @@ RUN apk add --no-cache \
 # Copy package files
 COPY package*.json ./
 COPY tsconfig.json ./
-COPY esbuild.config.mjs ./
+COPY .swcrc ./
 
 # Install all dependencies (including devDependencies for build)
 RUN npm ci --only=production=false

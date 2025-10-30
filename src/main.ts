@@ -40,8 +40,7 @@ export async function bootstrap(): Promise<void> {
 }
 
 // Only run bootstrap if this file is executed directly (not during testing)
-// ES module equivalent of: if (require.main === module)
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   bootstrap().catch(error => {
     const logger = new Logger('Bootstrap');
     logger.error('Failed to start application:', error);
