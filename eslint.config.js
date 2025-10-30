@@ -152,6 +152,20 @@ export default [
     },
   },
   {
+    files: ['**/*.mjs'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+    },
+  },
+  {
     ignores: ['dist/', 'node_modules/', 'docker/', 'coverage/', '*.config.js', '.eslintrc.js'],
   },
 ];

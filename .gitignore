@@ -316,3 +316,4 @@ api-docs/
 .claude/
 .Cline/
 dist/
+.docker/docker-compose.override.yml

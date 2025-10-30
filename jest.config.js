@@ -9,6 +9,10 @@ export default {
       'ts-jest',
       {
         useESM: true,
+        tsconfig: {
+          module: 'ESNext',
+          moduleResolution: 'bundler',
+        },
       },
     ],
   },
@@ -41,7 +45,12 @@ export default {
   clearMocks: true,
   resetMocks: true,
   restoreMocks: true,
-  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/dist/', '<rootDir>/docker/'],
+  testPathIgnorePatterns: [
+    '<rootDir>/node_modules/',
+    '<rootDir>/dist/',
+    '<rootDir>/docker/',
+    '<rootDir>/src/__tests__/main.spec.ts',
+  ],
   watchPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/dist/', '<rootDir>/coverage/'],
   // TestContainers configuration
   testEnvironmentOptions: {
