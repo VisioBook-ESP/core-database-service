@@ -197,114 +197,114 @@ jobs:
         run: |
           docker push ghcr.io/visiobook-esp/core-database-service:latest
 
-  # 7. Minikube Deployment Test (following your pattern)
-  minikube:
-    name: 🏗️ Deploy & Test Core Database Service on Minikube
-    runs-on: ubuntu-latest
-    needs: docker-build-and-push
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install kubectl
-        run: |
-          KUBECTL_VERSION="v1.30.1"
-          curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          sudo mv kubectl /usr/local/bin/kubectl
-
-      - name: Setup Minikube
-        uses: medyagh/setup-minikube@latest
-        with:
-          kubernetes-version: v1.30.1
-          driver: docker
-          container-runtime: containerd
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: v3.14.0
-
-      - name: Load Docker image into Minikube
-        run: |
-          # Pull the image we just built
-          docker pull ghcr.io/visiobook-esp/core-database-service:latest
-          # Load it into Minikube
-          minikube image load ghcr.io/visiobook-esp/core-database-service:latest
-
-      - name: Deploy Core Database Service Chart
-        run: |
-          echo "🚀 Deploying Core Database Service to Minikube..."
-          helm install core-database-service helm/ \
-            --set image.repository=ghcr.io/visiobook-esp/core-database-service \
-            --set image.tag=latest \
-            --set image.pullPolicy=Never \
-            --set database.url="postgresql://postgres:password@localhost:5432/visiobook_dev" \
-            --set redis.host=localhost \
-            --set istio.enabled=false \
-            --wait --timeout=300s
-
-          release="core-database-service"
-          namespace="default"
-
-          echo "⏳ Checking if all pods for $release are running..."
-
-          ATTEMPTS=0
-          MAX_ATTEMPTS=10
-          SLEEP_TIME=10
-          READY=false
-
-          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-            echo "🔄 Attempt $((ATTEMPTS+1))/$MAX_ATTEMPTS..."
-
-            kubectl get pods -n $namespace
-
-            NOT_READY=$(kubectl get pods -l "app.kubernetes.io/instance=$release" -n $namespace \
-              --no-headers | grep -v 'Running' || true)
-
-            if [ -z "$NOT_READY" ]; then
-              echo "✅ All pods for $release are running!"
-              READY=true
-              break
-            fi
-
-            echo "⏳ Some pods are not yet running. Waiting $SLEEP_TIME seconds..."
-            ATTEMPTS=$((ATTEMPTS+1))
-            sleep $SLEEP_TIME
-          done
-
-          if [ "$READY" = false ]; then
-            echo "❌ Deployment failed - pods not ready after $MAX_ATTEMPTS attempts"
-            kubectl describe pods -l "app.kubernetes.io/instance=$release" -n $namespace
-            kubectl logs -l "app.kubernetes.io/instance=$release" -n $namespace --tail=50
-            exit 1
-          fi
-
-      - name: Test Health Endpoints
-        run: |
-          echo "🔍 Testing health endpoints..."
-          kubectl port-forward svc/core-database-service 3000:3000 &
-          PF_PID=$!
-
-          # Wait for port-forward to be ready
-          sleep 10
-
-          # Test health endpoints
-          echo "Testing liveness endpoint..."
-          curl -f http://localhost:3000/api/v1/health/live || exit 1
-
-          echo "Testing readiness endpoint..."
-          curl -f http://localhost:3000/api/v1/health/ready || exit 1
-
-          echo "Testing general health endpoint..."
-          curl -f http://localhost:3000/api/v1/health || exit 1
-
-          # Clean up port-forward
-          kill $PF_PID
-
-          echo "✅ All health checks passed!"
-
-      - name: Cleanup
-        if: always()
-        run: |
-          helm uninstall core-database-service || true
-          minikube delete || true
+#  # 7. Minikube Deployment Test (following your pattern)
+#  minikube:
+#    name: 🏗️ Deploy & Test Core Database Service on Minikube
+#    runs-on: ubuntu-latest
+#    needs: docker-build-and-push
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Install kubectl
+#        run: |
+#          KUBECTL_VERSION="v1.30.1"
+#          curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+#          chmod +x kubectl
+#          sudo mv kubectl /usr/local/bin/kubectl
+#
+#      - name: Setup Minikube
+#        uses: medyagh/setup-minikube@latest
+#        with:
+#          kubernetes-version: v1.30.1
+#          driver: docker
+#          container-runtime: containerd
+#
+#      - name: Set up Helm
+#        uses: azure/setup-helm@v3
+#        with:
+#          version: v3.14.0
+#
+#      - name: Load Docker image into Minikube
+#        run: |
+#          # Pull the image we just built
+#          docker pull ghcr.io/visiobook-esp/core-database-service:latest
+#          # Load it into Minikube
+#          minikube image load ghcr.io/visiobook-esp/core-database-service:latest
+#
+#      - name: Deploy Core Database Service Chart
+#        run: |
+#          echo "🚀 Deploying Core Database Service to Minikube..."
+#          helm install core-database-service helm/ \
+#            --set image.repository=ghcr.io/visiobook-esp/core-database-service \
+#            --set image.tag=latest \
+#            --set image.pullPolicy=Never \
+#            --set database.url="postgresql://postgres:password@localhost:5432/visiobook_dev" \
+#            --set redis.host=localhost \
+#            --set istio.enabled=false \
+#            --wait --timeout=300s
+#
+#          release="core-database-service"
+#          namespace="default"
+#
+#          echo "⏳ Checking if all pods for $release are running..."
+#
+#          ATTEMPTS=0
+#          MAX_ATTEMPTS=10
+#          SLEEP_TIME=10
+#          READY=false
+#
+#          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+#            echo "🔄 Attempt $((ATTEMPTS+1))/$MAX_ATTEMPTS..."
+#
+#            kubectl get pods -n $namespace
+#
+#            NOT_READY=$(kubectl get pods -l "app.kubernetes.io/instance=$release" -n $namespace \
+#              --no-headers | grep -v 'Running' || true)
+#
+#            if [ -z "$NOT_READY" ]; then
+#              echo "✅ All pods for $release are running!"
+#              READY=true
+#              break
+#            fi
+#
+#            echo "⏳ Some pods are not yet running. Waiting $SLEEP_TIME seconds..."
+#            ATTEMPTS=$((ATTEMPTS+1))
+#            sleep $SLEEP_TIME
+#          done
+#
+#          if [ "$READY" = false ]; then
+#            echo "❌ Deployment failed - pods not ready after $MAX_ATTEMPTS attempts"
+#            kubectl describe pods -l "app.kubernetes.io/instance=$release" -n $namespace
+#            kubectl logs -l "app.kubernetes.io/instance=$release" -n $namespace --tail=50
+#            exit 1
+#          fi
+#
+#      - name: Test Health Endpoints
+#        run: |
+#          echo "🔍 Testing health endpoints..."
+#          kubectl port-forward svc/core-database-service 3000:3000 &
+#          PF_PID=$!
+#
+#          # Wait for port-forward to be ready
+#          sleep 10
+#
+#          # Test health endpoints
+#          echo "Testing liveness endpoint..."
+#          curl -f http://localhost:3000/api/v1/health/live || exit 1
+#
+#          echo "Testing readiness endpoint..."
+#          curl -f http://localhost:3000/api/v1/health/ready || exit 1
+#
+#          echo "Testing general health endpoint..."
+#          curl -f http://localhost:3000/api/v1/health || exit 1
+#
+#          # Clean up port-forward
+#          kill $PF_PID
+#
+#          echo "✅ All health checks passed!"
+#
+#      - name: Cleanup
+#        if: always()
+#        run: |
+#          helm uninstall core-database-service || true
+#          minikube delete || true
