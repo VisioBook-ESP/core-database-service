@@ -182,7 +182,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/visiobook-esp/core-database-service
+          images: ghcr.io/visiobook-esp/core-database-service-dev
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -191,11 +191,11 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -f docker/Dockerfile -t ghcr.io/visiobook-esp/core-database-service:latest ./
+          docker build -f docker/Dockerfile -t ghcr.io/visiobook-esp/core-database-service-dev:latest ./
 
       - name: Push Docker image
         run: |
-          docker push ghcr.io/visiobook-esp/core-database-service:latest
+          docker push ghcr.io/visiobook-esp/core-database-service-dev:latest
 
   # 7. Minikube Deployment Test (following your pattern)
   minikube:
@@ -227,15 +227,15 @@ jobs:
       - name: Load Docker image into Minikube
         run: |
           # Pull the image we just built
-          docker pull ghcr.io/visiobook-esp/core-database-service:latest
+          docker pull ghcr.io/visiobook-esp/core-database-service-dev:latest
           # Load it into Minikube
-          minikube image load ghcr.io/visiobook-esp/core-database-service:latest
+          minikube image load ghcr.io/visiobook-esp/core-database-service-dev:latest
 
       - name: Deploy Core Database Service Chart
         run: |
           echo "🚀 Deploying Core Database Service to Minikube..."
           helm install core-database-service helm/ \
-            --set image.repository=ghcr.io/visiobook-esp/core-database-service \
+            --set image.repository=ghcr.io/visiobook-esp/core-database-service-dev \
             --set image.tag=latest \
             --set image.pullPolicy=Never \
             --set database.url="postgresql://postgres:password@localhost:5432/visiobook_dev" \
